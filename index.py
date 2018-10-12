@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import os
 import re
 import sys
 from enum import Enum
@@ -292,7 +293,8 @@ def removeNonEnglish(font):
 
 def main():
     inFile = sys.argv[1]
-    outFile = "./Fixed/{0}".format(inFile)
+    baseName = os.path.basename(inFile)
+    outFile = "./Fixed/{0}".format(baseName)
     font = TTFont(inFile)
     print("Font: {0}".format(inFile))
 
