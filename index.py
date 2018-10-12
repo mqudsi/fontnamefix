@@ -34,7 +34,7 @@ class FontWidth(Enum):
 
 class Platform(Enum):
     Unicode = 0
-    Macintosh = 1
+    Mac = 1
     ISO = 2  # deprecated
     Windows = 3
     Custom = 4
@@ -46,7 +46,7 @@ class WindowsEncoding(Enum):
     Utf32 = 10
 
 
-class MacintoshEncoding(Enum):
+class MacEncoding(Enum):
     Roman = 0
 
 
@@ -56,7 +56,7 @@ class WindowsLanguage(Enum):
     English = 0x0409
 
 
-class MacintoshLanguage(Enum):
+class MacLanguage(Enum):
     English = 0
     French = 1
     Arabic = 12
@@ -79,8 +79,8 @@ class Name(Enum):
     License = 13
     LicenseUrl = 14
     Reserved = 15
-    TypographicFamily = 16
-    TypographicSubfamily = 17
+    TypographicFamily = 16  # aka Preferred Family
+    TypographicSubfamily = 17  # aka Preferred Subfamily
     CompatibleFull = 18
     SampleText = 19
     PostScriptCid = 20
@@ -123,8 +123,14 @@ def fixNames(font, baseName=""):
     name = font.get("name")
 
     if len(baseName) == 0:
-        baseName = "{0}".format(name.getName(Name.Family, 1, 0, 0))
-    classPlusStyle = name.getName(Name.Subfamily, 1, 0, 0)
+        baseName = "{0}".format(
+            name.getName(
+                Name.Family, Platform.Mac, MacEncoding.Roman, MacLanguage.English
+            )
+        )
+    classPlusStyle = name.getName(
+        Name.Subfamily, Platform.Mac, MacEncoding.Roman, MacLanguage.English
+    )
 
     # baseName must not include things like "Regular"
     assert removeRegular(baseName) == baseName
@@ -136,42 +142,56 @@ def fixNames(font, baseName=""):
     name.setName(
         "{0} {1}".format(baseName, className).strip().replace("  ", " "),
         Name.Family,
-        1,
-        0,
-        0,
+        Platform.Mac,
+        MacEncoding.Roman,
+        MacLanguage.English,
     )
     name.setName(
         "{0} {1} {2}".format(baseName, className, shrink(styleName)),
         Name.Family,
-        3,
-        1,
+        Platform.Windows,
+        WindowsEncoding.Utf16,
         WindowsLanguage.English,
     )
 
     # SubfamilyName
-    name.setName("{0}".format(styleName), Name.Subfamily, 1, 0, 0)
+    name.setName(
+        "{0}".format(styleName),
+        Name.Subfamily,
+        Platform.Mac,
+        MacEncoding.Roman,
+        MacLanguage.English,
+    )
 
     # FullFontName
     name.setName(
         "{0}{1}-{2}".format(baseName, className, styleName),
         Name.FullFont,
-        3,
-        1,
+        Platform.Windows,
+        WindowsEncoding.Utf16,
         WindowsLanguage.English,
     )
     name.setName(
-        "{0}{1}-{2}".format(baseName, className, styleName), Name.FullFont, 1, 0, 0
+        "{0}{1}-{2}".format(baseName, className, styleName),
+        Name.FullFont,
+        Platform.Mac,
+        MacEncoding.Roman,
+        MacLanguage.English,
     )
 
     # PostScriptName
     name.setName(
-        "{0}{1}-{2}".format(baseName, className, styleName), Name.PostScript, 1, 0, 0
+        "{0}{1}-{2}".format(baseName, className, styleName),
+        Name.PostScript,
+        Platform.Mac,
+        MacEncoding.Roman,
+        MacLanguage.English,
     )
     name.setName(
         "{0}{1}-{2}".format(baseName, className, styleName),
         Name.PostScript,
-        3,
-        1,
+        Platform.Windows,
+        WindowsEncoding.Utf16,
         WindowsLanguage.English,
     )
 
@@ -179,38 +199,39 @@ def fixNames(font, baseName=""):
     name.setName(
         "{0} {1}".format(baseName, removeRegular(className)).strip(),
         Name.TypographicFamily,
-        1,
-        0,
-        0,
+        Platform.Mac,
+        MacEncoding.Roman,
+        MacLanguage.English,
     )
     name.setName(
         "{0} {1}".format(baseName, className).strip(),
         Name.TypographicFamily,
-        3,
-        1,
+        Platform.Windows,
+        WindowsEncoding.Utf16,
         WindowsLanguage.English,
     )
 
     # TypographicSubfamily (Weight/Width/Slope)
-    name.setName("{0}".format(styleName), Name.TypographicSubfamily, 3, 1, 0x409)
+    name.setName(
+        "{0}".format(styleName),
+        Name.TypographicSubfamily,
+        Platform.Windows,
+        WindowsEncoding.Utf16WindowsLanguage.English,
+    )
 
     # CompatibleFullName (macOS-only drop-down menu name)
     name.setName(
         "{0} {1} {2}".format(baseName, className, shrink(className)).replace("  ", " "),
         Name.CompatibleFull,
-        1,
-        0,
-        0,
+        Platform.Mac,
+        MacEncoding.Roman,
+        MacLanguage.English,
     )
 
     # If name 17 contains non-WWS data (e.g. Caption, Display, etc.), set field 21 WwsFamilyName to
     # real family name + variant.
     name.setName(
-        "",
-        Name.WwsFamily,
-        Platform.Macintosh,
-        MacintoshEncoding.Roman,
-        MacintoshLanguage.English,
+        "", Name.WwsFamily, Platform.Mac, MacEncoding.Roman, MacLanguage.English
     )
     name.setName(
         "",
@@ -222,11 +243,7 @@ def fixNames(font, baseName=""):
 
     # If name 17 contains non-WWS data (e.g. Caption, Display, etc.), repeat here with only WWS data
     name.setName(
-        "",
-        Name.WwsSubfamily,
-        Platform.Macintosh,
-        MacintoshEncoding.Roman,
-        MacintoshLanguage.English,
+        "", Name.WwsSubfamily, Platform.Mac, MacEncoding.Roman, MacLanguage.English
     )
     name.setName(
         "",
@@ -242,8 +259,20 @@ def fixNames(font, baseName=""):
 def setSampleText(font, sampleText):
     name = font.get("name")
 
-    name.setName(sampleText, Name.SampleText, 1, 0, 0)
-    name.setName(sampleText, Name.SampleText, 3, 1, WindowsLanguage.English)
+    name.setName(
+        sampleText,
+        Name.SampleText,
+        Platform.Mac,
+        MacEncoding.Roman,
+        MacLanguage.English,
+    )
+    name.setName(
+        sampleText,
+        Name.SampleText,
+        Platform.Windows,
+        WindowsEncoding.Utf16,
+        WindowsLanguage.English,
+    )
 
     name.compile(font)
 
@@ -254,8 +283,8 @@ def removeNonEnglish(font):
     name.names = [
         x
         for x in name.names
-        if (x.platformID == 1 and x.langID == 0)
-        or (x.platformID == 3 and x.langID == 0x409)
+        if (x.platformID == Platform.Mac and x.langID == MacLanguage.English)
+        or (x.platformID == Platform.Windows and x.langID == WindowsLanguage.English)
     ]
 
     name.compile(font)
